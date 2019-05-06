@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-
+// TODO: Make delete from clipboard history actually delete from real clipboard? Maybe make it an option
+// TODO: Give user the option to set their own key to summon the app
 // TODO: Add icon so that it shows up in install and file explorer as well as Task Manager
-// TODO: Make it so that it minimizes if it goes out of focus on its own
 namespace ClipHistory {
     public partial class Form1 : Form {
         
@@ -34,24 +34,24 @@ namespace ClipHistory {
         private static int _hookHandle = 0;
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-        public static extern int SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hInstance, int threadId);
+        private static extern int SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hInstance, int threadId);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-        public static extern bool UnhookWindowsHookEx(int idHook);
+        private static extern bool UnhookWindowsHookEx(int idHook);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-        public static extern int CallNextHookEx(int idHook, int nCode, IntPtr wParam, IntPtr lParam);
+        private static extern int CallNextHookEx(int idHook, int nCode, IntPtr wParam, IntPtr lParam);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-        public static extern short GetKeyState(int nVirtKey);
+        private static extern short GetKeyState(int nVirtKey);
 
         public delegate int HookProc(int nCode, IntPtr wParam, IntPtr lParam);
 
         // Hook constants
-        public const int WH_KEYBOARD_LL = 13;
-        public const int VK_SHIFT = 0x10;
-        public const int VK_LCONTROL = 0xA2;
-        public const int VK_RCONTROL = 0xA3;
+        private const int WH_KEYBOARD_LL = 13;
+        private const int VK_SHIFT = 0x10;
+        private const int VK_LCONTROL = 0xA2;
+        private const int VK_RCONTROL = 0xA3;
 
         // What actually keeps track of history
         private int historyIndex = 0;
@@ -99,15 +99,24 @@ namespace ClipHistory {
             // Initialize menuItem1
             menuItem1.Index = 0;
             menuItem1.Text = "E&xit";
-            menuItem1.Click += new System.EventHandler(menuItem1_Click);
+            menuItem1.Click += menuItem1_Click;
 
             notifyIcon.ContextMenu = contextMenu1;
+
+            // Event handlers for when the form loses focus (makes it so it can be summoned with the keyboard hook again)
+            Leave += Form1_LostFocus;
+            LostFocus += Form1_LostFocus;
         }
         
         // Updates the UI when there is a clipboard change or the user moves up/down the history
         private void UpdateUI() {
 
-            labelMain.Text = history[historyIndex];
+            try {
+                labelMain.Text = history[historyIndex];
+            } catch (ArgumentOutOfRangeException) {
+                labelMain.Text = "";
+            }
+            
 
             if (historyIndex > 0) {
                 labelNext.Text = history[historyIndex - 1];
@@ -135,6 +144,12 @@ namespace ClipHistory {
                 historyIndex = 0;
                 Hide();
                 WindowState = FormWindowState.Minimized;
+            } else if (e.KeyCode == Keys.Back && history.Count > 0){ // Remove history
+                history.RemoveAt(historyIndex);
+                if (historyIndex > 0) {
+                    historyIndex -= 1;
+                }
+
             } else if (e.KeyCode == Keys.Escape) { // Minimize window
                 historyIndex = 0;
                 Hide();
@@ -177,6 +192,10 @@ namespace ClipHistory {
                 ShowInTaskbar = false;
                 AddClipboardFormatListener(this.Handle);
             }
+        }
+
+        private void Form1_LostFocus(object sender, EventArgs e) {
+            WindowState = FormWindowState.Minimized;
         }
 
 // MARK: Keyboard Hooks
