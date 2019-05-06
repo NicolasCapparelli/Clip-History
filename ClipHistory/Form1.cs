@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
+// TODO: Sometimes it comes up randomly??
+// TODO: Add icon so that it shows up in install and file explorer as well as Task Manager
+// TODO: Make it so that it minimizes if it goes out of focus on its own
 namespace ClipHistory {
     public partial class Form1 : Form {
         
@@ -52,26 +55,27 @@ namespace ClipHistory {
 
         // What actually keeps track of history
         private int historyIndex = 0;
+        private const int maxHistory = 20;
         private List<string> history = new List<string>();
 
         public Form1() {
 
             // Start form in the center of screen
-            this.StartPosition = FormStartPosition.CenterScreen;
+            StartPosition = FormStartPosition.CenterScreen;
             InitializeComponent();
 
             // Makes the form have rounded corners
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            FormBorderStyle = FormBorderStyle.None;
             Region = System.Drawing.Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 20, 20));
-
+            
             // Init clipboard listener and hooks
-            AddClipboardFormatListener(this.Handle);
+            AddClipboardFormatListener(Handle);
             SetHook();
             SetUp();
 
             // Start the application with the form minimized and hidden
             WindowState = FormWindowState.Minimized;
-            this.Hide();
+            Hide();
         }
 
         private void SetUp() {
@@ -82,7 +86,7 @@ namespace ClipHistory {
             labelMain.Text = text;
 
             // Handles what happens when the form is minimized
-            this.Resize += new EventHandler(this.Form1_ResizeEnd);
+            Resize += Form1_ResizeEnd;
 
             notifyIcon.Text = "ClipHistory";
             notifyIcon.BalloonTipIcon = ToolTipIcon.Info; //Shows the info icon so the user doesn't think there is an error.
@@ -129,12 +133,12 @@ namespace ClipHistory {
             } else if (e.KeyCode == Keys.Enter) { // Select history
                 Clipboard.SetText(history[historyIndex]);
                 historyIndex = 0;
-                this.Hide();
-                this.WindowState = FormWindowState.Minimized;
+                Hide();
+                WindowState = FormWindowState.Minimized;
             } else if (e.KeyCode == Keys.Escape) { // Minimize window
                 historyIndex = 0;
-                this.Hide();
-                this.WindowState = FormWindowState.Minimized;
+                Hide();
+                WindowState = FormWindowState.Minimized;
                 return;
             }
 
@@ -152,6 +156,10 @@ namespace ClipHistory {
                     if (iData.GetDataPresent(DataFormats.Text)) {
                         string data = (string)iData.GetData(DataFormats.Text);
                         history.Insert(0, data);
+                        if (history.Count >= maxHistory) {
+                            history.RemoveAt(history.Count - 1);
+                        }
+
                         UpdateUI();
                     }
                     break;
@@ -162,7 +170,7 @@ namespace ClipHistory {
             }
         }
 
-        // Hides the form in the taskbar
+        // Hides the form in the task-bar
         private void Form1_ResizeEnd(object sender, EventArgs e) {
             if (this.WindowState == FormWindowState.Minimized) {
                 notifyIcon.Visible = true;
