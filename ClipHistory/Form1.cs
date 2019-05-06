@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-// TODO: Sometimes it comes up randomly??
+
 // TODO: Add icon so that it shows up in install and file explorer as well as Task Manager
 // TODO: Make it so that it minimizes if it goes out of focus on its own
 namespace ClipHistory {
@@ -172,9 +172,9 @@ namespace ClipHistory {
 
         // Hides the form in the task-bar
         private void Form1_ResizeEnd(object sender, EventArgs e) {
-            if (this.WindowState == FormWindowState.Minimized) {
+            if (WindowState == FormWindowState.Minimized) {
                 notifyIcon.Visible = true;
-                this.ShowInTaskbar = false;
+                ShowInTaskbar = false;
                 AddClipboardFormatListener(this.Handle);
             }
         }
@@ -189,15 +189,15 @@ namespace ClipHistory {
             if (nCode >= 0) {
                 var hookStruct = (KbLLHookStruct)Marshal.PtrToStructure(lParam, typeof(KbLLHookStruct));
                 
-                bool ctrlDown = GetKeyState(VK_LCONTROL) != 0 || GetKeyState(VK_RCONTROL) != 0;
-                bool shiftDown = GetKeyState(VK_SHIFT) != 0;
+                bool ctrlDown = GetKeyState(VK_LCONTROL) < 0 || GetKeyState(VK_RCONTROL) < 0;
+                bool shiftDown = GetKeyState(VK_SHIFT) < 0;
 
                 // Focuses the window if CTRL + SHIFT + H is pressed
                 if (shiftDown & ctrlDown & hookStruct.vkCode == 0x48) {                    
-                    this.BringToFront();
-                    this.Activate();
-                    this.WindowState = FormWindowState.Normal;
-                    this.Show();
+                    BringToFront();
+                    Activate();
+                    WindowState = FormWindowState.Normal;
+                    Show();
                     
                 }
             }
