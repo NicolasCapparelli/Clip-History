@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
+// TODO: Fix lose focus issue when settings form is opened
 // TODO: Make delete from clipboard history actually delete from real clipboard? Maybe make it an option
 // TODO: Give user the option to set their own key to summon the app
 // TODO: Add icon so that it shows up in install and file explorer as well as Task Manager
@@ -94,12 +96,16 @@ namespace ClipHistory {
             // Notify icon right click menu
             var contextMenu1 = new ContextMenu();
             var menuItem1 = new MenuItem();
-            contextMenu1.MenuItems.AddRange(new MenuItem[] { menuItem1 });
+            var menuItem2 = new MenuItem();
+            contextMenu1.MenuItems.AddRange(new MenuItem[] { menuItem1, menuItem2});
 
-            // Initialize menuItem1
             menuItem1.Index = 0;
-            menuItem1.Text = "E&xit";
-            menuItem1.Click += menuItem1_Click;
+            menuItem1.Text = "S&ettings";
+            menuItem1.Click += menuItemSettings_Click;
+
+            menuItem2.Index = 1;
+            menuItem2.Text = "Exit";
+            menuItem2.Click += menuItemExit_Click;
 
             notifyIcon.ContextMenu = contextMenu1;
 
@@ -249,8 +255,32 @@ namespace ClipHistory {
             this.Show();
         }
 
-        private void menuItem1_Click(object sender, EventArgs e) {
+        private void menuItemSettings_Click(object sender, EventArgs e) {
+            var settingsForm = new Settings();
+            settingsForm.ShowDialog();
+            settingsForm.BringToFront();
+            settingsForm.Activate();
+            // Right now, this is not staying in the front because the main form minimizes if it loses focus
+        }
+
+        private void menuItemExit_Click(object sender, EventArgs e) {
             this.Close();
+        }
+
+        void SystemEvents_PowerModeChanged(object sender, PowerModeChangedEventArgs e) {
+            // When computer is suspended (hibernate/sleep)
+            if (e.Mode == PowerModes.Suspend) {
+                // Remove hook and clipboard listener
+                UnhookWindowsHookEx(_hookHandle);
+                RemoveClipboardFormatListener(this.Handle);
+            }
+
+            // When computer wakes up
+            if (e.Mode == PowerModes.Resume) {
+                // Add hook and clipboard listener
+                _hookHandle = SetWindowsHookEx(WH_KEYBOARD_LL, KbHookProc, (IntPtr)0, 0);
+                AddClipboardFormatListener(this.Handle);
+            }
         }
     }
 }
